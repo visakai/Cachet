@@ -15,6 +15,7 @@ use CachetHQ\Cachet\Bus\Commands\Component\AddComponentCommand;
 use CachetHQ\Cachet\Bus\Commands\Component\RemoveComponentCommand;
 use CachetHQ\Cachet\Bus\Commands\Component\UpdateComponentCommand;
 use CachetHQ\Cachet\Models\Component;
+use CachetHQ\Cachet\Models\ComponentGroup;
 use CachetHQ\Cachet\Models\Tag;
 use GrahamCampbell\Binput\Facades\Binput;
 use Illuminate\Contracts\Auth\Guard;
@@ -109,6 +110,26 @@ class ComponentController extends AbstractApiController
      */
     public function putComponent(Component $component)
     {
+	$apiKey = getallheaders()['X-Cachet-Token'];
+        //get teamFilter from config file based on API key
+        logger( "apiKey: $apiKey");
+        if($apiKey == 'ABEfHSqiabiuBQ9hbtwH' ){
+            $teamFilter = 'EngCI';
+        } elseif ($apiKey == 'asdfads'){
+            $teamFilter = 'EngSCM';
+        } else {
+
+        }
+        $group_id = $component['group_id'];
+        $group = ComponentGroup::find($group_id);
+        $group_name = $group['name'];
+
+        if(substr($group_name, 0, strlen($teamFilter)) === $teamFilter) {
+        } else {
+            header('HTTP/1.0 403 Forbidden');
+            die("You are only allowed to modify components in groups that start with " . $teamFilter);
+        }
+
         try {
             dispatch(new UpdateComponentCommand(
                 $component,

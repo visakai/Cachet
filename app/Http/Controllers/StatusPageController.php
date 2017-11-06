@@ -15,6 +15,7 @@ use AltThree\Badger\Facades\Badger;
 use CachetHQ\Cachet\Dates\DateFactory;
 use CachetHQ\Cachet\Http\Controllers\Api\AbstractApiController;
 use CachetHQ\Cachet\Models\Component;
+use CachetHQ\Cachet\Models\ComponentGroup;
 use CachetHQ\Cachet\Models\Incident;
 use CachetHQ\Cachet\Models\Metric;
 use CachetHQ\Cachet\Repositories\Metric\MetricRepository;
@@ -54,6 +55,20 @@ class StatusPageController extends AbstractApiController
      */
     public function showIndex()
     {
+        return $this->showIndexByTeam('');
+    }
+
+    public function showIndexByTeam($team)
+    {
+        if ($team=='ci'){
+	    $teamFilter = 'EngCI';
+	} elseif ($team == 'scm'){
+	    $teamFilter = 'EngSCM';
+	} else {
+	    $teamFilter = '';
+	}
+	// save filter to session
+	$_SESSION["teamFilter"] = $teamFilter;
         $today = Date::now();
         $startDate = Date::now();
 
@@ -103,7 +118,29 @@ class StatusPageController extends AbstractApiController
             return strtotime($key);
         }, SORT_REGULAR, true)->all();
 
+	foreach ($allIncidents as $key => $value)
+	{
+            if(count($value))
+	    {
+	        foreach($value as $k => $v)
+		{
+		    $component_id = $v['component_id'];
+		    logger('test logger');
+		    $component = Component::find($component_id);
+		    $group_id = $component['group_id'];
+		    $group = ComponentGroup::find($group_id);
+		    $group_name = $group['name'];
+		    if(substr($group_name, 0, strlen($teamFilter)) === $teamFilter)
+		    {
+		    } else {
+	                unset($value[$k]);
+		    }
+		}
+	    }
+        }
+
         return View::make('index')
+            ->with('teamFilter', $teamFilter)
             ->withDaysToShow($daysToShow)
             ->withAllIncidents($allIncidents)
             ->withCanPageForward((bool) $today->gt($startDate))
