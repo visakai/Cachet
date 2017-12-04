@@ -60,13 +60,20 @@ class StatusPageController extends AbstractApiController
      */
     public function showIndexByTeam($team)
     {
-        if ($team=='ci')
+        $filter_mapping = config('filter.filter_mapping');
+        $filters = explode(',', $filter_mapping);
+        $teamFilter = null;
+        foreach($filters as $filter)
         {
-            $teamFilter = 'EngCI';
-        } elseif ($team == 'scm')
+            list($k, $v) = explode(':', $filter);
+            if($team == $k)
+            {
+                $teamFilter = $v;
+                break;
+            }
+        }
+        if($teamFilter == null)
         {
-            $teamFilter = 'EngSCM';
-        } else {
             $teamFilter = '';
         }
     	// save filter to session
