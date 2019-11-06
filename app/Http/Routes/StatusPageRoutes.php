@@ -35,6 +35,8 @@ class StatusPageRoutes
                 'uses' => 'StatusPageController@showIndex',
             ]);
 
+            $router->get('/filter/{team}', ['uses' => 'StatusPageController@showIndexByTeam']);
+
             $router->get('incident/{incident}', [
                 'as'   => 'incident',
                 'uses' => 'StatusPageController@showIncident',

@@ -13,6 +13,7 @@ namespace CachetHQ\Cachet\Integrations\Core;
 
 use CachetHQ\Cachet\Integrations\Contracts\System as SystemContract;
 use CachetHQ\Cachet\Models\Component;
+use CachetHQ\Cachet\Models\ComponentGroup;
 use CachetHQ\Cachet\Models\Incident;
 
 /**
@@ -30,8 +31,33 @@ class System implements SystemContract
     public function getStatus()
     {
         $enabledScope = Component::enabled();
-        $totalComponents = Component::enabled()->count();
-        $majorOutages = Component::enabled()->status(4)->count();
+        $components = Component::enabled()->get();
+        $teamFilter = $_SESSION["teamFilter"];
+        foreach ($components as $key => $component )
+	    {
+            $group_id = $component['group_id'];
+            $group = ComponentGroup::find($group_id);
+            $group_name = $group['name'];
+            if(substr($group_name, 0, strlen($teamFilter)) != $teamFilter)
+            {
+                unset($components[$key]);
+            }
+        }
+        $totalComponents = $components->count();
+
+        $majorOutagesFilter = Component::enabled()->status(4)->get();
+        foreach ($majorOutagesFilter as $key => $component )
+        {
+            $group_id = $component['group_id'];
+            $group = ComponentGroup::find($group_id);
+            $group_name = $group['name'];
+            if(substr($group_name, 0, strlen($teamFilter)) != $teamFilter)
+            {
+                unset($majorOutagesFilter[$key]);
+            }
+        }
+        $majorOutages = $majorOutagesFilter->count();
+
         $isMajorOutage = $totalComponents ? ($majorOutages / $totalComponents) >= 0.5 : false;
 
         // Default data
@@ -41,17 +67,41 @@ class System implements SystemContract
             'favicon'        => 'favicon-high-alert',
         ];
 
+        $componentsNotOK = Component::enabled()->notStatus(1)->get();
+        foreach ($componentsNotOK as $key => $component )
+        {
+            $group_id = $component['group_id'];
+            $group = ComponentGroup::find($group_id);
+            $group_name = $group['name'];
+            if(substr($group_name, 0, strlen($teamFilter)) != $teamFilter)
+            {
+                unset($componentsNotOK[$key]);
+            }
+        }
+
         if ($isMajorOutage) {
             $status = [
                 'system_status'  => 'danger',
                 'system_message' => trans_choice('cachet.service.major', $totalComponents),
                 'favicon'        => 'favicon-high-alert',
             ];
-        } elseif (Component::enabled()->notStatus(1)->count() === 0) {
+        } elseif ($componentsNotOK->count() === 0) {
             // If all our components are ok, do we have any non-fixed incidents?
             $incidents = Incident::notScheduled()->orderBy('created_at', 'desc')->get()->filter(function ($incident) {
                 return $incident->status > 0;
             });
+
+            foreach ($incidents as $key => $value )
+            {
+                $component_id = $value['component_id'];
+                $group_id = $component['group_id'];
+                $group = ComponentGroup::find($group_id);
+                $group_name = $group['name'];
+                if(substr($group_name, 0, strlen($teamFilter)) != $teamFilter)
+                {
+                    unset($incidents[$key]);
+                }
+            }
             $incidentCount = $incidents->count();
 
             if ($incidentCount === 0 || ($incidentCount >= 1 && (int) $incidents->first()->status === 4)) {

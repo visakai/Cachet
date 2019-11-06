@@ -15,6 +15,7 @@ use AltThree\Badger\Facades\Badger;
 use CachetHQ\Cachet\Dates\DateFactory;
 use CachetHQ\Cachet\Http\Controllers\Api\AbstractApiController;
 use CachetHQ\Cachet\Models\Component;
+use CachetHQ\Cachet\Models\ComponentGroup;
 use CachetHQ\Cachet\Models\Incident;
 use CachetHQ\Cachet\Models\Metric;
 use CachetHQ\Cachet\Repositories\Metric\MetricRepository;
@@ -47,13 +48,37 @@ class StatusPageController extends AbstractApiController
         $this->metricRepository = $metricRepository;
     }
 
+    public function showIndex()
+    {
+        return $this->showIndexByTeam('');
+    }
+
     /**
      * Displays the status page.
      *
      * @return \Illuminate\View\View
      */
-    public function showIndex()
+    public function showIndexByTeam($team)
     {
+        $filter_mapping = config('filter.filter_mapping');
+        $filters = explode(',', $filter_mapping);
+        $teamFilter = null;
+        foreach($filters as $filter)
+        {
+            list($k, $v) = explode(':', $filter);
+            if($team == $k)
+            {
+                $teamFilter = $v;
+                break;
+            }
+        }
+        if($teamFilter == null)
+        {
+            $teamFilter = '';
+        }
+    	// save filter to session
+    	$_SESSION["teamFilter"] = $teamFilter;
+
         $today = Date::now();
         $startDate = Date::now();
 
@@ -103,7 +128,27 @@ class StatusPageController extends AbstractApiController
             return strtotime($key);
         }, SORT_REGULAR, true)->all();
 
+        foreach ($allIncidents as $key => $value)
+    	{
+            if(count($value))
+    	    {
+    	        foreach($value as $k => $v)
+        		{
+        		    $component_id = $v['component_id'];
+        		    $component = Component::find($component_id);
+        		    $group_id = $component['group_id'];
+        		    $group = ComponentGroup::find($group_id);
+        		    $group_name = $group['name'];
+        		    if(substr($group_name, 0, strlen($teamFilter)) != $teamFilter)
+        		    {
+                        unset($value[$k]);
+        		    }
+        		}
+    	    }
+        }
+
         return View::make('index')
+            ->with('teamFilter', $teamFilter)
             ->withDaysToShow($daysToShow)
             ->withAllIncidents($allIncidents)
             ->withCanPageForward((bool) $today->gt($startDate))

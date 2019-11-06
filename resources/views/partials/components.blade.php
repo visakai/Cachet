@@ -1,5 +1,6 @@
 @if($component_groups->count() > 0)
 @foreach($component_groups as $componentGroup)
+@if( substr($componentGroup->name, 0, strlen($teamFilter)) === $teamFilter )
 <ul class="list-group components">
     @if($componentGroup->enabled_components->count() > 0)
     <li class="list-group-item group-name">
@@ -18,6 +19,7 @@
     </div>
     @endif
 </ul>
+@endif
 @endforeach
 @endif
 

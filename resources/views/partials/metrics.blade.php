@@ -1,6 +1,7 @@
 @if($metrics->count() > 0)
 <ul class="list-group">
     @foreach($metrics as $metric)
+    @if( substr($metric->name, 0, strlen($teamFilter)) === $teamFilter )
     <li class="list-group-item metric" data-metric-id="{{ $metric->id }}">
         <div class="row">
             <div class="col-xs-10">
@@ -29,6 +30,7 @@
             </div>
         </div>
     </li>
+    @endif
     @endforeach
 </ul>
 <script>
